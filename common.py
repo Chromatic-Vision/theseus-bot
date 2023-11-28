@@ -1,7 +1,8 @@
 import discord
-import re, datetime
+import re
+import datetime
 
-client = discord.Client()
+client = discord.Client(intents=discord.Intents.all())
 
 class MessageData:
 
@@ -325,7 +326,7 @@ async def create_embed(embed_data):
         embed_data["color"] = 0x34aa2c
 
     if "url" not in embed_data:
-        embed_data["url"] = discord.Embed.Empty
+        embed_data["url"] = None
 
     if "timestamp" not in embed_data:
         embed_data["timestamp"] = datetime.datetime.utcnow()
@@ -351,8 +352,8 @@ async def create_embed(embed_data):
         elif key == "author":
             if embed_data[key]:
 
-                embed_data[key]["url"] = discord.Embed.Empty if "url" not in embed_data[key] else embed_data[key]["url"]
-                embed_data[key]["icon_url"] = discord.Embed.Empty if "icon_url" not in embed_data[key] else embed_data[key]["icon_url"]
+                embed_data[key]["url"] = None if "url" not in embed_data[key] else embed_data[key]["url"]
+                embed_data[key]["icon_url"] = None if "icon_url" not in embed_data[key] else embed_data[key]["icon_url"]
 
                 try:
                     embed.set_author(name=embed_data[key]["name"], url=embed_data[key]["url"], icon_url=embed_data[key]["icon_url"])
@@ -362,7 +363,7 @@ async def create_embed(embed_data):
         elif key == "footer":
             if embed_data[key]:
 
-                embed_data[key]["icon_url"] = discord.Embed.Empty if "icon_url" not in embed_data[key] else embed_data[key]["icon_url"]
+                embed_data[key]["icon_url"] = None if "icon_url" not in embed_data[key] else embed_data[key]["icon_url"]
 
                 try:
                     if "timestamp" in embed_data:
