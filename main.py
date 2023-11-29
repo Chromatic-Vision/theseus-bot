@@ -7,7 +7,7 @@ client = discord.Client(intents=intents)
 
 logger = logger.Logger(True,
                        True,
-                       "LOG: $color[$info]$reset $timecolor[%H:%M:%S.%f]$reset $message $tracecolor($filename/$funcname:$line)$reset")
+                       "$color[$info]$reset $timecolor[%H:%M:%S.%f]$reset $message $tracecolor($filename/$funcname:$line)$reset")
 logger.reset_log()
 
 # ----------------------------------------------------------------------------------------------------------------------
