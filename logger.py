@@ -3,6 +3,7 @@ from datetime import datetime
 import os
 import io
 import traceback
+import re
 
 class Logger:
 
@@ -82,102 +83,39 @@ class Logger:
             res = res.replace("$timecolor", "")
             res = res.replace("$tracecolor", "")
 
-        res = res.replace("$filename", self.trace()[0]) # filename of function
-        res = res.replace("$funcname", self.trace()[1]) # name of function
-        res = res.replace("$line", self.trace()[2]) # line of function
+        filename, func, line = self.trace()
+        res = res.replace("$filename", filename) # filename of function
+        res = res.replace("$funcname", func) # name of function
+        res = res.replace("$line", line) # line of function
         res = res.replace("$message", message) # message
 
         return res
 
-    def trace(self) -> tuple:
+    def trace(self) -> tuple[str, str, str]:
 
-        _filename = None
-        _func = None
-        _line = None
+        _filename = []
+        _func = []
+        _line = []
 
         trace = io.StringIO()
         traceback.print_stack(file=trace)
         trace_string = trace.getvalue()
+        # print(trace_string)
         trace.close()
-        trace_string_formatted = ''
-        space = False
-        even = True
-        for c in trace_string:
-            if c == '\n':
-                if not even:
-                    trace_string_formatted += ';'
-                    even = True
-                else:
-                    even = False
 
-                trace_string_formatted += ' '
-                space = True
-            elif c == ' ':
-                pass
-            else:
-                space = False
+        split = trace_string.split('\n')
+        for line in split[:-1:2]:
+            # print(line)
+            m = re.search('\\s{2}File "(.+?)", line ([0-9]+), in (.+)$', line)
+            # print(m)
+            assert m is not None, str(m)
 
-            if not space:
-                trace_string_formatted += c
-                # print(trace_string_formatted)
+            _filename.append(os.path.basename(m.group(1)))
+            _line.append(m.group(2))
+            _func.append(m.group(3))
 
-        filenames = ''
-        filename = ''
-        state = 0
-        line = ''
-        i = 0
-        while i < len(trace_string_formatted):
-            c = trace_string_formatted[i]
-
-            if state == 0:
-                if c == '"':
-                    state = 1
-            elif state == 1:
-                if c != '"':
-                    filename += c
-                else:
-                    filenames += os.path.basename(filename)
-                    filename = ''
-                    state = 2
-
-            elif state == 2:
-
-                j = i + 7
-
-                while j < len(trace_string_formatted) and trace_string_formatted[j] != ',':
-                    line += trace_string_formatted[j]
-
-                    j += 1
-
-                state = 3
-                i = j
-
-            elif state == 3:
-                j = i + 4
-                # print("call")
-                func = ''
-                while j < len(trace_string_formatted) and trace_string_formatted[j] != ' ':
-                    func += trace_string_formatted[j]
-                    # print(func)
-                    j += 1
-                state = 4
-
-                _func = func
-                _line = line
-                filenames += " "
-                line = ''
-            elif state == 4:
-                if trace_string_formatted[i] == ';':  # TODO: you can't have a semicolon in the python
-                    state = 0
-
-            i += 1
-
-        file_traces = filenames[:-1].split(" ")
-        first_file = str(file_traces[-4])
-
-        _filename = first_file.replace('.py', '')
-
-        return _filename, _func, _line
+        # return _filename, _func, _line
+        return _filename[-4], _func[-4], _line[-4]
 
     def info_from_type(self, type: int):
         if type == 0:
