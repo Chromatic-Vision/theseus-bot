@@ -1,6 +1,9 @@
+import datetime
 import discord
 import common
 import logger
+import os
+import farm
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -32,6 +35,8 @@ class Bot:
         if not message.startswith(self.prefix) or raw.author.bot:
             return
 
+        logger.log(f"passed message {repr(message)}")
+
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
         branch = command.split(" ", 1)[1] if command.split().__len__() >= 2 else None
@@ -41,19 +46,19 @@ class Bot:
                 "title": "Theseus bot help menu",
                 "description": "Commands:",
                 "footer": {
-                    "text": f"Executed by {raw.author}",
-                    "icon_url": raw.author.avatar.url
+                    "text": f"Executed by {raw.author}"
+                    # "icon_url": raw.author.avatar.url
                 },
                 "fields": [{
                     "name": f"{self.prefix}help",
                     "value": "Displays a help menu.",
                     "inline": True
-                },
-                {
+                  },
+                  {
                     "name": f"{self.prefix}ping",
                     "value": "Displays the ping (latency in ms) of the bot.",
                     "inline": False
-                }
+                  }
                 ]}
             embed = await common.create_embed(embed_data)
             await raw.reply(embed=embed)
@@ -65,7 +70,49 @@ class Bot:
             self.prefix = str(branch)
             await raw.reply("Prefix set to " + str(branch))
 
+        elif base == "create":
+            id = raw.author.id
+            author_name = raw.author.name
+            farm_name = str(branch)
+            f = farm.Farm(farm_name, 2, 2, datetime.datetime.now())
+            filename = os.path.join('farms', str(id) + '.json')
+            existed = True
+            try:
+                f.load(filename)
+            except FileNotFoundError:
+                f.save(filename)
+                existed = False
+            if existed:
+                await raw.reply(f"You already have a farm")
+            else:
+                await raw.reply(f"Created farm for user '{raw.author.name}' with name '{str(branch)}'")
+            await raw.reply(f.render())
+            # await raw.reply(f"Creating farms is being worked on. {raw.author.id}, '{str(branch)}'")
+
+        elif base == "render":
+            if str(branch) == "all":
+                try:
+                    message = ''
+                    f = farm.Farm("undefined", 2, 2, datetime.datetime.now())
+                    for filename in os.listdir('farms'):
+                        f.load(os.path.join('farms', filename))
+
+                        message += '[' + str(f.lx) + ']' + ' ' + f.name + ' (' + client.get_user(int(filename.split('.', 1)[0])).name + ')' + '\n' + f.render() + '\n'
+                    await raw.reply(message)
+
+                except FileNotFoundError:
+                    await raw.reply('No farms')
+                    return
+                return
+
+            id = raw.author.id
+            f = farm.Farm('undefined', 2, 2, datetime.datetime.now())
+            f.load(os.path.join('farms', str(id) + '.json'))
+            await raw.reply(f.render())
+
+
 bot = Bot()
+
 
 @client.event
 async def on_ready():
@@ -78,5 +125,11 @@ async def on_ready():
 @client.event
 async def on_message(raw):
     await bot.process_message(raw)
+
+
+try:
+    os.mkdir('farms')
+except FileExistsError:
+    pass
 
 client.run(token)
