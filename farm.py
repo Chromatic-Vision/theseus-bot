@@ -66,7 +66,7 @@ class Farm:
             Harvests.DECIDUOUS_TREE
         ]
 
-        self.harvests = []
+        self.harvests = {}
         self.reset()
 
 
@@ -100,11 +100,11 @@ class Farm:
                 self.harvests.append([harvest.value.name, 0])
 
 
-    def get_farm_to_int_list(self):
+    def get_farm_to_str_list(self):
         res = []
 
         for square in self.farm:
-            res.append(list(Harvests).index(square))
+            res.append(square.value.name)
 
         print(res)
         return res
@@ -118,7 +118,7 @@ class Farm:
                 "ly": self.ly,
                 "last_harvest": self.last_harvest.strftime("%Y-%m-%d %H:%M:%S"),
                 "harvests": self.harvests,
-                "farm": self.get_farm_to_int_list()
+                "farm": self.get_farm_to_str_list()
             }
 
             f.write(json.dumps(data))
