@@ -15,7 +15,7 @@ class Plantable(Enum):
     NOT_PLANTABLE = 0
     PLANTABLE = 1
     CONSUMABLE_PLANTABLE = 2
-
+    UNOBTAINABLE = 3
 
 class Harvest:
     def __init__(self, name: str, plantable: Plantable, days_needed=-1, product="undefined", rare="undefined", flag: Flag=Flag.SINGLE, a=1, b=1):
@@ -33,6 +33,7 @@ class Harvest:
         self.flag = flag
         self.a = a
         self.b = b
+
 
     def get(self) -> (str, int):
         if self.flag == Flag.SINGLE:
@@ -53,7 +54,7 @@ class Harvest:
 
 
 class Harvests(Enum):
-    GRASS = Harvest("grass", Plantable.NOT_PLANTABLE)
+    GREEN_SQUARE = Harvest("green_square", Plantable.UNOBTAINABLE)
     CORN = Harvest("corn", Plantable.CONSUMABLE_PLANTABLE, days_needed=2)
     WATERMELON = Harvest("watermelon", Plantable.CONSUMABLE_PLANTABLE, flag=Flag.RANDOM_RANGE, a=3, b=7)
     DECIDUOUS_TREE = Harvest("deciduous_tree", Plantable.PLANTABLE, days_needed=1, product="apple", flag=Flag.PERCENTAGE, a=1, b=4)
@@ -123,22 +124,44 @@ class Farm:
         res += str(", ".join(harvests))
         return res if harvests else "Nothing could be harvested!"
 
+    def decomplie_total_harvests(self):
+        res = ""
+        harvests = []
+
+        for name in self.harvests:
+
+            if self.harvests[name] == 0:
+                continue
+
+            harvests.append(f":{name}:{self.harvests[name]}")
+
+        res += str(", ".join(harvests))
+        return res
+
+    def get_total_harvests(self) -> int:
+
+        amount = 0
+
+        for name in self.harvests:
+            amount += self.harvests[name]
+
+        return amount
 
     def add(self, product, amount):
         for slot in self.harvests:
-            if slot[0] == product:
+            if slot == product:
                 print(f"{product} added: {amount}")
-                slot[1] += amount
+                self.harvests[slot] += amount
                 break
 
 
     def reset(self):
 
-        self.harvests = []
+        self.harvests = {}
 
         for harvest in list(Harvests):
-            if harvest.value.plantable != 1:
-                self.harvests.append([harvest.value.name, 0])
+            if not (harvest.value.plantable == Plantable.PLANTABLE or harvest.value.plantable == Plantable.UNOBTAINABLE):
+                self.harvests[harvest.value.name] = 0
 
     def get_farm_to_str_list(self) -> list[str]:
         res = []
@@ -207,4 +230,4 @@ if __name__ == '__main__':
     f.harvest()
     # print(f.__dict__)
     print(f.get_farm_to_str_list())
-    f.save()
+    f.save("farms/test.json")

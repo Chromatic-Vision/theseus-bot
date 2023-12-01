@@ -35,7 +35,8 @@ class Bot:
         if not message.startswith(self.prefix) or raw.author.bot:
             return
 
-        logger.log(f"passed message {repr(message)}")
+        # logger.log(f"Passed message {repr(message)}")
+        logger.log(f"{raw.author.name} used the following command: {message}")
 
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
@@ -49,16 +50,22 @@ class Bot:
                     "text": f"Executed by {raw.author}",
                     "icon_url": raw.author.avatar.url if raw.author.avatar is not None else None
                 },
-                "fields": [{
-                    "name": f"{self.prefix}help",
-                    "value": "Displays a help menu.",
-                    "inline": True
-                  },
-                  {
-                    "name": f"{self.prefix}ping",
-                    "value": "Displays the ping (latency in ms) of the bot.",
-                    "inline": False
-                  }
+                "fields": [
+                    {
+                        "name": f"{self.prefix}help",
+                        "value": "Displays a help menu.",
+                        "inline": True
+                    },
+                    {
+                        "name": f"{self.prefix}ping",
+                        "value": "Displays the ping (latency in ms) of the bot.",
+                        "inline": False
+                    },
+                    {
+                        "name": f"{self.prefix}create [name]",
+                        "value": "Creates new farm.",
+                        "inline": True
+                    }
                 ]}
             embed = await common.create_embed(embed_data)
             await raw.reply(embed=embed)
@@ -77,37 +84,49 @@ class Bot:
             f = farm.Farm(farm_name, 2, 2, datetime.datetime.now())
             filename = os.path.join('farms', str(id) + '.json')
             existed = True
+
             try:
                 f.load(filename)
             except FileNotFoundError:
+
+                if not branch:
+                    await raw.reply("Please provide a name for your farm, with syntax '=create [name]'")
+                    return
+
                 f.save(filename)
                 existed = False
+
             if existed:
-                await raw.reply(f"You already have a farm")
+                await raw.reply(f"You already have a farm!")
             else:
                 await raw.reply(f"Created farm for user '{raw.author.name}' with name '{str(branch)}'")
+
             await raw.reply(f.render())
-            # await raw.reply(f"Creating farms is being worked on. {raw.author.id}, '{str(branch)}'")
 
         elif base == "render":
             if str(branch) == "all":
-                try:
-                    message = ''
-                    f = farm.Farm("undefined", 2, 2, datetime.datetime.now())
-                    for filename in os.listdir('farms'):
-                        f.load(os.path.join('farms', filename))
+                message = ''
+                f = farm.Farm("undefined", 2, 2, datetime.datetime.now())
+                for filename in os.listdir('farms'):
+                    f.load(os.path.join('farms', filename))
 
-                        message += '[' + str(f.lx) + ']' + ' ' + f.name + ' (' + client.get_user(int(filename.split('.', 1)[0])).name + ')' + '\n' + f.render() + '\n'
-                    await raw.reply(message)
+                    message += ('[' + str(f.lx) + ']' + ' '
+                                + f.name + ' (' + client.get_user(int(filename.split('.', 1)[0])).name + ')' + '\n'
+                                + f.decomplie_total_harvests() + '\n'
+                                + '[' + str(f.get_total_harvests()) + '/???]' + '\n'
+                                + f.render() + '\n')
 
-                except FileNotFoundError:
-                    await raw.reply('No farms')
-                    return
+                await raw.reply(message if message != '' else "No farms found!")
                 return
 
-            id = raw.author.id
-            f = farm.Farm('undefined', 2, 2, datetime.datetime.now())
-            f.load(os.path.join('farms', str(id) + '.json'))
+            try:
+                id = raw.author.id
+                f = farm.Farm('undefined', 2, 2, datetime.datetime.now())
+                f.load(os.path.join('farms', str(id) + '.json'))
+            except FileNotFoundError:
+                await raw.reply('Your farm has not been found!')
+                return
+
             await raw.reply(f.render())
 
         elif base == "harvest":
