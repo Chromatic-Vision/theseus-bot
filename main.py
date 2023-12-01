@@ -36,7 +36,7 @@ class Bot:
             return
 
         # logger.log(f"Passed message {repr(message)}")
-        logger.log(f"{raw.author.name} isused the following command: {message}")
+        logger.log(f"{raw.author.name} issued the following command: {message}")
 
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
