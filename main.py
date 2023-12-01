@@ -46,8 +46,8 @@ class Bot:
                 "title": "Theseus bot help menu",
                 "description": "Commands:",
                 "footer": {
-                    "text": f"Executed by {raw.author}"
-                    # "icon_url": raw.author.avatar.url
+                    "text": f"Executed by {raw.author}",
+                    "icon_url": raw.author.avatar.url if raw.author.avatar is not None else None
                 },
                 "fields": [{
                     "name": f"{self.prefix}help",
@@ -109,6 +109,22 @@ class Bot:
             f = farm.Farm('undefined', 2, 2, datetime.datetime.now())
             f.load(os.path.join('farms', str(id) + '.json'))
             await raw.reply(f.render())
+
+        elif base == "harvest":
+            try:
+                f = farm.Farm("undefined", 1, 1, datetime.datetime.now())
+                f.load(os.path.join('farms', str(raw.author.id) + ".json"))
+
+                a = f.decompile_harvest_result(f.harvest())
+
+                logger.log(a)
+                await raw.reply(a)
+                f.save("farms/" + str(raw.author.id) + ".json")
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+            return
+
 
 
 bot = Bot()

@@ -26,7 +26,6 @@ class Harvest:
         if self.product == "undefined":
             self.product = self.name
 
-        # TODO: make enum
         self.plantable = plantable
 
         self.days_needed = days_needed  # how many days it needs to become fully grown
@@ -87,17 +86,43 @@ class Farm:
 
 
     def harvest(self):
+
+        res = {}
+
         for square in self.farm:
 
             harvest = square.value
 
             if datetime.datetime.now() - self.last_harvest >= datetime.timedelta(days=harvest.days_needed):
                 print("passed:", datetime.datetime.now() - self.last_harvest)
-                self.add(harvest.get()[0], harvest.get()[1])
+                name, value = harvest.get()
+
+                if res.get(name) is None:
+                    res[name] = 0
+
+                res[name] += value
+                self.add(name, value)
 
         self.last_harvest = datetime.datetime.now()
 
         print(self.harvests)
+        print("res:", res)
+        return res
+
+    def decompile_harvest_result(self, result):
+        res = "Added harvests: "
+        harvests = []
+
+        for name in result:
+
+            if result[name] == 0:
+                continue
+
+            harvests.append(f":{name}:{result[name]}")
+
+        res += str(", ".join(harvests))
+        return res if harvests else "Nothing could be harvested!"
+
 
     def add(self, product, amount):
         for slot in self.harvests:
@@ -154,7 +179,7 @@ class Farm:
                         self.farm.append(Harvests.__getitem__(harvest.upper()))
 
                 except KeyError:
-                    print("Broken farm detected! Reformatting...")
+                    print("Broken farm detected!")
                     # f.truncate()
                     # self.save()
 
