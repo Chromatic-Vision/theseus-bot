@@ -36,7 +36,7 @@ class Bot:
             return
 
         # logger.log(f"Passed message {repr(message)}")
-        logger.log(f"{raw.author.name} used the following command: {message}")
+        logger.log(f"{raw.author.name} isused the following command: {message}")
 
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
@@ -58,12 +58,12 @@ class Bot:
                     },
                     {
                         "name": f"{self.prefix}ping",
-                        "value": "Displays the ping (latency in ms) of the bot.",
+                        "value": "Displays the latency of the bot in ms.",
                         "inline": False
                     },
                     {
                         "name": f"{self.prefix}create [name]",
-                        "value": "Creates new farm.",
+                        "value": "Creates a new farm.",
                         "inline": True
                     }
                 ]}
