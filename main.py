@@ -65,6 +65,16 @@ class Bot:
                         "name": f"{self.prefix}create [name]",
                         "value": "Creates a new farm.",
                         "inline": True
+                    },
+                    {
+                        "name": f"{self.prefix}harvest",
+                        "value": "Harvests items in your farm.",
+                        "inline": False
+                    },
+                    {
+                        "name": f'{self.prefix}render ["all"/""]',
+                        "value": 'Renders your current farm, with argument "all", every single farm that exist including inventory.',
+                        "inline": True
                     }
                 ]}
             embed = await common.create_embed(embed_data)
@@ -77,11 +87,15 @@ class Bot:
             self.prefix = str(branch)
             await raw.reply("Prefix set to " + str(branch))
 
+        elif base == "prefixspace":
+            self.prefix = str(branch) + ' '
+            await raw.reply("Prefix set to " + str(branch) + " (with space)")
+
         elif base == "create":
             id = raw.author.id
             author_name = raw.author.name
             farm_name = str(branch)
-            f = farm.Farm(farm_name, 2, 2, datetime.datetime.now())
+            f = farm.Farm(farm_name, 1, datetime.datetime.now())
             filename = os.path.join('farms', str(id) + '.json')
             existed = True
 
@@ -106,14 +120,14 @@ class Bot:
         elif base == "render":
             if str(branch) == "all":
                 message = ''
-                f = farm.Farm("undefined", 2, 2, datetime.datetime.now())
+                f = farm.Farm()
                 for filename in os.listdir('farms'):
                     f.load(os.path.join('farms', filename))
 
-                    message += ('[' + str(f.lx) + ']' + ' '
+                    message += ('[' + str(f.level) + ']' + ' '
                                 + f.name + ' (' + client.get_user(int(filename.split('.', 1)[0])).name + ')' + '\n'
                                 + f.decomplie_total_harvests() + '\n'
-                                + '[' + str(f.get_total_harvests()) + '/???]' + '\n'
+                                + '[' + str(f.get_total_harvests()) + '/' + str(f.get_inventory_limit()) + ']' + '\n'
                                 + f.render() + '\n')
 
                 await raw.reply(message if message != '' else "No farms found!")
@@ -121,7 +135,7 @@ class Bot:
 
             try:
                 id = raw.author.id
-                f = farm.Farm('undefined', 2, 2, datetime.datetime.now())
+                f = farm.Farm()
                 f.load(os.path.join('farms', str(id) + '.json'))
             except FileNotFoundError:
                 await raw.reply('Your farm has not been found!')
@@ -131,7 +145,7 @@ class Bot:
 
         elif base == "harvest":
             try:
-                f = farm.Farm("undefined", 1, 1, datetime.datetime.now())
+                f = farm.Farm()
                 f.load(os.path.join('farms', str(raw.author.id) + ".json"))
 
                 a = f.decompile_harvest_result(f.harvest())
@@ -143,6 +157,30 @@ class Bot:
                 await raw.reply('You currently have no farm!')
                 return
             return
+
+        elif base == "upgrade":
+
+            try:
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(raw.author.id) + ".json"))
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+
+            cost = f.get_level_cost(f.level + 1)
+
+            if f.harvests["moneybag"] - cost < 0:
+                await raw.reply(f"You don't have enough money to upgrade your farm to level {f.level + 1}! ({cost} needed, you only have {f.harvests['moneybag']}:moneybag:)")
+                return
+
+            f.level += 1
+
+            for _ in range(f.get_level_cost(f.level)):
+                f.farm.append(farm.Harvests.GREEN_SQUARE)
+
+            f.save("farms/" + str(raw.author.id) + ".json")
+
+            await raw.reply(f"Succesfully upgraded you farm to level {f.level} (-{cost}:moneybag:)")
 
 
 

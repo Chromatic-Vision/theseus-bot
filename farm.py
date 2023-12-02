@@ -54,6 +54,8 @@ class Harvest:
 
 
 class Harvests(Enum):
+
+    MONEYBAG = Harvest("moneybag", Plantable.NOT_PLANTABLE)
     GREEN_SQUARE = Harvest("green_square", Plantable.UNOBTAINABLE)
     CORN = Harvest("corn", Plantable.CONSUMABLE_PLANTABLE, days_needed=2)
     WATERMELON = Harvest("watermelon", Plantable.CONSUMABLE_PLANTABLE, flag=Flag.RANDOM_RANGE, a=3, b=7)
@@ -68,10 +70,9 @@ class Harvests(Enum):
 
 class Farm:
 
-    def __init__(self, name, lx, ly, last_harvest: datetime.datetime):
+    def __init__(self, name="undefined", level=1, last_harvest: datetime.datetime = datetime.datetime.now()):
         self.name = name
-        self.lx = lx
-        self.ly = ly
+        self.level = level
 
         self.last_harvest = last_harvest
 
@@ -111,6 +112,7 @@ class Farm:
         return res
 
     def decompile_harvest_result(self, result):
+
         res = "Added harvests: "
         harvests = []
 
@@ -147,6 +149,18 @@ class Farm:
 
         return amount
 
+    def get_inventory_limit(self) -> int:
+        return fibonacci_of(self.level) * 10
+
+    def get_level_cost(self, level: int):
+        if level == 1:
+            raise ValueError('you cannot upgrade to level 1??')
+        x, y = self.get_farm_length_from_level(level - 1)
+        if level % 2 == 0:
+            return y
+        else:
+            return x
+
     def add(self, product, amount):
         for slot in self.harvests:
             if slot == product:
@@ -176,8 +190,7 @@ class Farm:
 
             data = {
                 "name": self.name,
-                "lx": self.lx,
-                "ly": self.ly,
+                "level": self.level,
                 "last_harvest": self.last_harvest.strftime("%Y-%m-%d %H:%M:%S"),
                 "harvests": self.harvests,
                 "farm": self.get_farm_to_str_list()
@@ -192,8 +205,7 @@ class Farm:
 
                 try:
                     self.name = farm_data["name"]
-                    self.lx = farm_data["lx"]
-                    self.ly = farm_data["ly"]
+                    self.level = farm_data["level"]
                     self.last_harvest = datetime.datetime.strptime(farm_data["last_harvest"], "%Y-%m-%d %H:%M:%S")
                     self.harvests = farm_data["harvests"]
 
@@ -213,18 +225,35 @@ class Farm:
                 f.seek(0)
                 print("'" + str(f.read()) + "'")
 
+    def get_farm_length_from_level(self, level: int) -> (int, int):
+
+        x = 2
+        y = 2
+        for i in range(1, level):
+            if i % 2 == 0:
+                y += 1
+            else:
+                x += 1
+        return x, y
+
     def render(self) -> str:
         out = ''
-        for y in range(self.ly):
-            for x in range(self.lx):
-                i = y * self.lx + x
+        for y in range(self.get_farm_length_from_level(self.level)[1]):
+            for x in range(self.get_farm_length_from_level(self.level)[0]):
+                i = y * self.get_farm_length_from_level(self.level)[0] + x
                 out += ':' + self.farm[i].value.name + ':'
             out += '\n'
         return out
 
+def fibonacci_of(n):
+    if n in {0, 1}:
+        return n
+
+    return fibonacci_of(n - 1) + fibonacci_of(n - 2)  # Recursive case
+
 
 if __name__ == '__main__':
-    f = Farm("amogoes", 420, 2, datetime.datetime.now() - datetime.timedelta(days=2, minutes=1))
+    f = Farm("amogoes", 1, datetime.datetime.now() - datetime.timedelta(days=2, minutes=1))
 
     f.load("amogoes.json")
     f.harvest()
