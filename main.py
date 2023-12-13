@@ -1,9 +1,10 @@
+import os
 import datetime
 import discord
 import common
 import logger
-import os
 import farm
+import utils
 
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
@@ -27,6 +28,10 @@ class Bot:
 
     def __init__(self):
         self.prefix = "="
+        self.description_filename = "description.txt"
+
+        self.load_prefix()
+
 
     async def process_message(self, raw: discord.Message):
 
@@ -58,12 +63,22 @@ class Bot:
                         "inline": True
                     },
                     {
+                        "name": f"{self.prefix}prefix [prefix: str]",
+                        "value": "Changes the current prefix.",
+                        "inline": False
+                    },
+                    {
+                        "name": f"{self.prefix}prefixspace [prefix: str]",
+                        "value": "Changes the current prefix, but with space after the prefix.",
+                        "inline": True
+                    },
+                    {
                         "name": f"{self.prefix}ping",
                         "value": "Displays the latency of the bot in ms.",
                         "inline": False
                     },
                     {
-                        "name": f"{self.prefix}create [name]",
+                        "name": f"{self.prefix}create [name: str]",
                         "value": "Creates a new farm.",
                         "inline": True
                     },
@@ -73,8 +88,28 @@ class Bot:
                         "inline": False
                     },
                     {
-                        "name": f'{self.prefix}render ["all"/""]',
+                        "name": f'{self.prefix}render [mode: str > "all"/""]',
                         "value": 'Renders your current farm, with argument "all", every single farm that exist including inventory.',
+                        "inline": True
+                    },
+                    {
+                        "name": f'{self.prefix}place [mode: str > "fill"] [start_x] [start_y] [end_x] [end_y] [item]',
+                        "value": "Places items in your farm from your inventory. Overwritten items in the farm are stored back, and missing items are purchased automatically.",
+                        "inline": False
+                    },
+                    {
+                        "name": f'{self.prefix}sell [item] ["all"/amount: int]',
+                        "value": "Sells items from your inventory. Negative values can be used to purchase the item directly.",
+                        "inline": True
+                    },
+                    {
+                        "name": f'{self.prefix}view_description',
+                        "value": "Displays the current public description.",
+                        "inline": False
+                    },
+                    {
+                        "name": f'{self.prefix}set_description [text: str]',
+                        "value": "Edits the current public description.",
                         "inline": True
                     }
                 ]}
@@ -86,10 +121,12 @@ class Bot:
 
         elif base == "prefix":
             self.prefix = str(branch)
+            self.save_prefix()
             await raw.reply("Prefix set to " + str(branch))
 
         elif base == "prefixspace":
             self.prefix = str(branch) + ' '
+            self.save_prefix()
             await raw.reply("Prefix set to " + str(branch) + " (with space)")
 
         elif base == "create":
@@ -316,6 +353,45 @@ class Bot:
                 await raw.reply(f"Success! (:moneybag:+{sell_amount * parsed_item.value.price}, :{parsed_item.name.lower()}:{f.harvests[parsed_item.name.lower()]})")
 
             f.save("farms/" + str(raw.author.id) + ".json")
+
+        elif base == "view_description":
+            await raw.reply(self.load_description())
+
+        elif base == "set_description":
+
+            logger.log(f"{utils.generate_diff(self.load_description(), str(branch))}")
+            await raw.reply(f"{utils.generate_diff(self.load_description(), str(branch))}")
+
+            self.save_description(str(branch))
+            await raw.reply("Finished!")
+
+
+
+    def save_description(self, text: str):
+        with open(self.description_filename, "w") as f:
+            f.write(text)
+            f.close()
+
+    def load_description(self) -> str:
+        try:
+            with open(self.description_filename, "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            self.save_description("This is the test message!!")
+            return "Created new file, since e couldn't find one!"
+
+    def save_prefix(self):
+        with open("prefix.txt", "w") as f:
+            f.write(self.prefix)
+            f.close()
+
+    def load_prefix(self):
+        try:
+            with open("prefix.txt", "r") as f:
+                self.prefix = f.read()
+        except FileNotFoundError:
+            return "="
+
 
 bot = Bot()
 
