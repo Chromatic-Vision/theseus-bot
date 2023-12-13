@@ -5,6 +5,7 @@ import logger
 import os
 import farm
 
+
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
@@ -213,22 +214,22 @@ class Bot:
                 await raw.reply("Failed to parse coordinate arguments to 'int'!")
                 return
 
-            if (start_x > f.get_farm_length_from_level(f.level)[0]
+            if (start_x >= f.get_farm_length_from_level(f.level)[0]
                     or start_x < 0):
                 await raw.reply(f"Start position {start_x} (x) is out of bounds!")
                 return
 
-            if (start_y > f.get_farm_length_from_level(f.level)[1]
+            if (start_y >= f.get_farm_length_from_level(f.level)[1]
                     or start_y < 0):
                 await raw.reply(f"Start position {start_y} (y) is out of bounds!")
                 return
 
-            if (end_x > f.get_farm_length_from_level(f.level)[0]
+            if (end_x >= f.get_farm_length_from_level(f.level)[0]
                     or end_x < 0):
                 await raw.reply(f"End position {end_x} (x) is out of bounds!")
                 return
 
-            if (end_y > f.get_farm_length_from_level(f.level)[1]
+            if (end_y >= f.get_farm_length_from_level(f.level)[1]
                     or end_y < 0):
                 await raw.reply(f"End position {end_y} (y) is out of bounds!")
                 return
@@ -246,7 +247,12 @@ class Bot:
                 for y in range(start_y, end_y + 1):
                     for x in range(start_x, end_x + 1):
                         i = y * f.get_farm_length_from_level(f.level)[0] + x
-                        f.farm[i] = parsed_harvest
+                        print(x, y, i, parsed_harvest)
+
+                        if not f.set_index(i, parsed_harvest):
+                            print('AAAAAAAAAAAAAAAAAAAAAAAAAAA')
+
+                        # f.farm[i] = parsed_harvest
 
                 f.save("farms/" + str(raw.author.id) + ".json")
                 await raw.reply("Success!")
