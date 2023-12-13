@@ -25,10 +25,11 @@ class Plantable(Enum):
     UNOBTAINABLE = 3
 
 class Harvest:
-    def __init__(self, name: str, plantable: Plantable, days_needed=-1, product="undefined", rare="undefined", flag: Flag=Flag.SINGLE, a=1, b=1):
+    def __init__(self, name: str, plantable: Plantable, price, days_needed=-1, product="undefined", rare="undefined", flag: Flag=Flag.SINGLE, a=1, b=1):
         self.name = name
         self.product = product
         self.rare = rare
+        self.price = price
 
         if self.product == "undefined":
             self.product = self.name
@@ -62,18 +63,18 @@ class Harvest:
 
 class Harvests(Enum):
 
-    MONEYBAG = Harvest("moneybag", Plantable.NOT_PLANTABLE)
-    GREEN_SQUARE = Harvest("green_square", Plantable.UNOBTAINABLE)
-    CORN = Harvest("corn", Plantable.CONSUMABLE_PLANTABLE, days_needed=2)
-    WATERMELON = Harvest("watermelon", Plantable.CONSUMABLE_PLANTABLE, flag=Flag.RANDOM_RANGE, a=3, b=7)
-    DECIDUOUS_TREE = Harvest("deciduous_tree", Plantable.PLANTABLE, days_needed=1, product="apple", flag=Flag.PERCENTAGE, a=1, b=4)
-    PEANUTS = Harvest("peanuts", Plantable.CONSUMABLE_PLANTABLE, days_needed=2, flag=Flag.RANDOM_RANGE, a=2, b=5)
-    HERB = Harvest("herb", Plantable.CONSUMABLE_PLANTABLE, days_needed=1)
-    COW = Harvest("cow", Plantable.PLANTABLE, days_needed=1, product="milk")
-    POTATO = Harvest("potato", Plantable.CONSUMABLE_PLANTABLE, days_needed=2, rare="sweet_potato", flag=Flag.RANDOM_DIFFERENT_ITEM_DROP, a=1, b=50)
-    APPLE = Harvest("apple", Plantable.NOT_PLANTABLE)  # TODO: maybe in the future plant an apple and get an apple tree?
-    MILK = Harvest("milk", Plantable.NOT_PLANTABLE)
-    SWEET_POTATO = Harvest("sweet_potato", Plantable.NOT_PLANTABLE)
+    MONEYBAG = Harvest("moneybag", Plantable.NOT_PLANTABLE, 1)
+    GREEN_SQUARE = Harvest("green_square", Plantable.UNOBTAINABLE, -1)
+    CORN = Harvest("corn", Plantable.CONSUMABLE_PLANTABLE, 2,  days_needed=2)
+    WATERMELON = Harvest("watermelon", Plantable.CONSUMABLE_PLANTABLE, 2, flag=Flag.RANDOM_RANGE, a=3, b=7)
+    DECIDUOUS_TREE = Harvest("deciduous_tree", Plantable.PLANTABLE, 15, days_needed=1, product="apple", flag=Flag.PERCENTAGE, a=1, b=4)
+    PEANUTS = Harvest("peanuts", Plantable.CONSUMABLE_PLANTABLE, 2, days_needed=2, flag=Flag.RANDOM_RANGE, a=2, b=5)
+    HERB = Harvest("herb", Plantable.CONSUMABLE_PLANTABLE, 5, days_needed=1)
+    COW = Harvest("cow", Plantable.PLANTABLE, 10, days_needed=1, product="milk")
+    POTATO = Harvest("potato", Plantable.CONSUMABLE_PLANTABLE, 5, days_needed=2, rare="sweet_potato", flag=Flag.RANDOM_DIFFERENT_ITEM_DROP, a=1, b=50)
+    APPLE = Harvest("apple", Plantable.NOT_PLANTABLE, 10)  # TODO: maybe in the future plant an apple and get an apple tree?
+    MILK = Harvest("milk", Plantable.NOT_PLANTABLE, 5)
+    SWEET_POTATO = Harvest("sweet_potato", Plantable.NOT_PLANTABLE, 0)
 
 class Farm:
 
@@ -242,6 +243,41 @@ class Farm:
             else:
                 x += 1
         return x, y
+
+    def set_index(self, index: int, harvest: Harvests) -> bool: # returns True if successful
+
+        # TODO: inventory space
+        square = self.farm[index]
+        harvest_amount = self.harvests[harvest.name.lower()] if harvest.name.lower() in self.harvests else 0
+        money_amount = self.harvests["moneybag"]
+        possess = harvest_amount > 0
+
+        if harvest.value.plantable == Plantable.NOT_PLANTABLE or harvest.value.plantable == Plantable.UNOBTAINABLE:
+            return False
+
+        if self.farm[index] == harvest:
+            return True
+
+        if not possess:
+
+            if money_amount >= harvest.value.price:
+                self.harvests["moneybag"] -= harvest.value.price
+
+            else:
+                return False
+        else:
+
+            self.harvests[harvest.name.lower()] -= 1
+
+        if square != Harvests.GREEN_SQUARE:
+            if square.name.lower() not in self.harvests:
+                self.harvests[square.name.lower()] = 0
+            self.harvests[square.name.lower()] += 1
+
+        self.farm[index] = harvest
+
+        return True
+
 
     def render(self) -> str:
         out = ''
