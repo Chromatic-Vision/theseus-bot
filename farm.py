@@ -4,6 +4,13 @@ import random
 from enum import Enum
 
 
+PLACE_MODE = [
+    "/",
+    "\\",
+    "fill"
+]
+
+
 class Flag(Enum):
     SINGLE = 0
     RANDOM_RANGE = 1

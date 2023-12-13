@@ -41,6 +41,7 @@ class Bot:
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
         branch = command.split(" ", 1)[1] if command.split().__len__() >= 2 else None
+        branches = branch.split(" ")
 
         if base == "help":
             embed_data = {
@@ -181,6 +182,76 @@ class Bot:
             f.save("farms/" + str(raw.author.id) + ".json")
 
             await raw.reply(f"Succesfully upgraded you farm to level {f.level} (-{cost}:moneybag:)")
+
+        elif base == "place":
+
+            try:
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(raw.author.id) + ".json"))
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+
+            if len(branches) < 6:
+                await raw.reply(f"no, {len(branches)}")
+                return
+
+            mode = branches[0]
+
+            print(branches)
+
+            if mode.lower() not in farm.PLACE_MODE:
+                await raw.reply(f"{mode.lower()} not in place mode, available: {farm.PLACE_MODE}")
+                return
+
+            try:
+                start_x = int(branches[1])
+                start_y = int(branches[2])
+                end_x = int(branches[3])
+                end_y = int(branches[4])
+            except ValueError:
+                await raw.reply("Failed to parse coordinate arguments to 'int'!")
+                return
+
+            if (start_x > f.get_farm_length_from_level(f.level)[0]
+                    or start_x < 0):
+                await raw.reply(f"Start position {start_x} (x) is out of bounds!")
+                return
+
+            if (start_y > f.get_farm_length_from_level(f.level)[1]
+                    or start_y < 0):
+                await raw.reply(f"Start position {start_y} (y) is out of bounds!")
+                return
+
+            if (end_x > f.get_farm_length_from_level(f.level)[0]
+                    or end_x < 0):
+                await raw.reply(f"End position {end_x} (x) is out of bounds!")
+                return
+
+            if (end_y > f.get_farm_length_from_level(f.level)[1]
+                    or end_y < 0):
+                await raw.reply(f"End position {end_y} (y) is out of bounds!")
+                return
+
+            harvest = branches[5]
+
+            try:
+                parsed_harvest = farm.Harvests.__getitem__(harvest.upper())
+            except ValueError:
+                await raw.reply(f"{harvest} is not a valid harvest!")
+                return
+
+            if mode == "fill":
+
+                for y in range(start_y, end_y + 1):
+                    for x in range(start_x, end_x + 1):
+                        i = y * f.get_farm_length_from_level(f.level)[0] + x
+                        f.farm[i] = parsed_harvest
+
+                f.save("farms/" + str(raw.author.id) + ".json")
+                await raw.reply("Success!")
+
+
 
 
 
