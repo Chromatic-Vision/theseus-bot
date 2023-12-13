@@ -104,7 +104,7 @@ class Farm:
             harvest = square.value
 
             if datetime.datetime.now() - self.last_harvest >= datetime.timedelta(days=harvest.days_needed):
-                print("passed:", datetime.datetime.now() - self.last_harvest)
+                # print("passed:", datetime.datetime.now() - self.last_harvest)
                 name, value = harvest.get()
 
                 if res.get(name) is None:
@@ -172,7 +172,7 @@ class Farm:
     def add(self, product, amount):
         for slot in self.harvests:
             if slot == product:
-                print(f"{product} added: {amount}")
+                # print(f"{product} added: {amount}")
                 self.harvests[slot] += amount
                 break
 

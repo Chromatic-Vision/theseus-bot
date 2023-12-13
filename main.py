@@ -5,7 +5,6 @@ import logger
 import os
 import farm
 
-
 intents = discord.Intents.all()
 client = discord.Client(intents=intents)
 
@@ -42,7 +41,7 @@ class Bot:
         command = message[self.prefix.__len__():]
         base = command.split(" ")[0]
         branch = command.split(" ", 1)[1] if command.split().__len__() >= 2 else None
-        branches = branch.split(" ")
+        branches = branch.split(" ") if branch is not None else [""]
 
         if base == "help":
             embed_data = {
@@ -194,12 +193,10 @@ class Bot:
                 return
 
             if len(branches) < 6:
-                await raw.reply(f"no, {len(branches)}")
+                await raw.reply(f"Too few arguments! send {self.prefix}help for help.")
                 return
 
             mode = branches[0]
-
-            print(branches)
 
             if mode.lower() not in farm.PLACE_MODE:
                 await raw.reply(f"{mode.lower()} not in place mode, available: {farm.PLACE_MODE}")
@@ -238,28 +235,87 @@ class Bot:
 
             try:
                 parsed_harvest = farm.Harvests.__getitem__(harvest.upper())
-            except ValueError:
+            except KeyError:
                 await raw.reply(f"{harvest} is not a valid harvest!")
                 return
 
             if mode == "fill":
 
+                failed = []
+
                 for y in range(start_y, end_y + 1):
                     for x in range(start_x, end_x + 1):
                         i = y * f.get_farm_length_from_level(f.level)[0] + x
-                        print(x, y, i, parsed_harvest)
+                        # print(x, y, i, parsed_harvest)
 
                         if not f.set_index(i, parsed_harvest):
-                            print('AAAAAAAAAAAAAAAAAAAAAAAAAAA')
-
-                        # f.farm[i] = parsed_harvest
+                            failed.append(f"{parsed_harvest.name} at {i}")
 
                 f.save("farms/" + str(raw.author.id) + ".json")
-                await raw.reply("Success!")
 
+                failed_str = "\n".join(failed)
+                await raw.reply(f"Finished placing!\n\nFailed farm squares:\n{failed_str}")
 
+            else:
 
+                await raw.reply(f"Place mode {mode} is currently unsupported.")
 
+        elif base == "sell":
+
+            if len(branches) < 2:
+                await raw.reply(f"Too few arguments! send {self.prefix}help for help.")
+                return
+
+            raw_item = branches[0]
+
+            try:
+                parsed_item = farm.Harvests.__getitem__(raw_item.upper())
+            except KeyError:
+                await raw.reply(f"{raw_item} is not a valid item to sell!")
+                return
+
+            if parsed_item.value.plantable == farm.Plantable.UNOBTAINABLE:
+                await raw.reply(f"{parsed_item.name.lower()} can not be obtained but sold???")
+                await raw.reply(f"<@827421329497128981>")
+                return
+
+            try:
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(raw.author.id) + ".json"))
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+
+            try:
+                sell_amount = int(branches[1]) if branches[1].lower() != "all" else 0.69 # special flag to sell everything
+            except ValueError:
+                await raw.reply(f"{branches[1]} is not a valid number to sell! send {self.prefix}help for more help.")
+                return
+
+            inventory_amount = f.harvests[parsed_item.name.lower()]
+
+            if inventory_amount <= 0:
+                await raw.reply("You don't have any of that item!")
+                return
+
+            if sell_amount == 0.69:
+
+                f.harvests[parsed_item.name.lower()] = 0
+                f.harvests["moneybag"] += (inventory_amount * parsed_item.value.price)
+
+                await raw.reply(f"Success! (:moneybag:+{inventory_amount * parsed_item.value.price}, :{parsed_item.name.lower()}:0)")
+            else:
+
+                if inventory_amount < sell_amount:
+                    await raw.reply(f"You cannot sell more amounts then you have! ({inventory_amount} in inventory, tried to sell {sell_amount})")
+                    return
+
+                f.harvests[parsed_item.name.lower()] -= sell_amount
+                f.harvests["moneybag"] += (sell_amount * parsed_item.value.price)
+
+                await raw.reply(f"Success! (:moneybag:+{sell_amount * parsed_item.value.price}, :{parsed_item.name.lower()}:{f.harvests[parsed_item.name.lower()]})")
+
+            f.save("farms/" + str(raw.author.id) + ".json")
 
 bot = Bot()
 
