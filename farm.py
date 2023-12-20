@@ -68,7 +68,7 @@ class Harvests(Enum):
     CORN = Harvest("corn", Plantable.CONSUMABLE_PLANTABLE, 2,  days_needed=2)
     WATERMELON = Harvest("watermelon", Plantable.CONSUMABLE_PLANTABLE, 2, flag=Flag.RANDOM_RANGE, a=3, b=7)
     DECIDUOUS_TREE = Harvest("deciduous_tree", Plantable.PLANTABLE, 15, days_needed=1, product="apple", flag=Flag.PERCENTAGE, a=1, b=4)
-    PEANUTS = Harvest("peanuts", Plantable.CONSUMABLE_PLANTABLE, 2, days_needed=2, flag=Flag.RANDOM_RANGE, a=2, b=5)
+    PEA_POD = Harvest("pea_pod", Plantable.CONSUMABLE_PLANTABLE, 2, days_needed=2, flag=Flag.RANDOM_RANGE, a=2, b=5)
     HERB = Harvest("herb", Plantable.CONSUMABLE_PLANTABLE, 5, days_needed=1)
     COW = Harvest("cow", Plantable.PLANTABLE, 10, days_needed=1, product="milk")
     POTATO = Harvest("potato", Plantable.CONSUMABLE_PLANTABLE, 5, days_needed=2, rare="sweet_potato", flag=Flag.RANDOM_DIFFERENT_ITEM_DROP, a=1, b=50)
@@ -84,14 +84,9 @@ class Farm:
 
         self.last_harvest = last_harvest
 
-        self.farm = [
-            Harvests.CORN,
-            Harvests.POTATO,
-            Harvests.COW,
-            Harvests.DECIDUOUS_TREE
-        ]
-
+        self.farm = []
         self.harvests = {}
+
         self.reset()
 
 
@@ -103,8 +98,11 @@ class Farm:
 
             harvest = square.value
 
+            if harvest.plantable == Plantable.UNOBTAINABLE:
+                continue
+
             if datetime.datetime.now() - self.last_harvest >= datetime.timedelta(days=harvest.days_needed):
-                # print("passed:", datetime.datetime.now() - self.last_harvest)
+
                 name, value = harvest.get()
 
                 if res.get(name) is None:
@@ -115,9 +113,26 @@ class Farm:
 
         self.last_harvest = datetime.datetime.now()
 
-        print(self.harvests)
-        print("res:", res)
         return res
+
+    def get_all_harvestable_time(self):
+
+        dates = {}
+
+        for i, square in enumerate(self.farm):
+
+            harvest = square.value
+
+            if harvest.plantable == Plantable.UNOBTAINABLE:
+                continue
+
+            res = str(datetime.timedelta(days=harvest.days_needed) - (datetime.datetime.now() - self.last_harvest))
+            res = res.replace(",", " and")
+
+            dates[harvest.name.lower()] = res
+
+        return dates
+
 
     def decompile_harvest_result(self, result):
 
@@ -134,7 +149,7 @@ class Farm:
         res += str(", ".join(harvests))
         return res if harvests else "Nothing could be harvested!"
 
-    def decomplie_total_harvests(self):
+    def decompile_total_harvests(self):
         res = ""
         harvests = []
 
@@ -158,7 +173,7 @@ class Farm:
         return amount
 
     def get_inventory_limit(self) -> int:
-        return fibonacci_of(self.level) * 10
+        return (fibonacci_of(self.level + 1)) * 10
 
     def get_level_cost(self, level: int):
         if level == 1:
@@ -179,11 +194,20 @@ class Farm:
 
     def reset(self):
 
-        self.harvests = {}
+        self.farm = [
+            Harvests.CORN,
+            Harvests.POTATO,
+            Harvests.COW,
+            Harvests.DECIDUOUS_TREE
+        ]
 
         for harvest in list(Harvests):
             if not (harvest.value.plantable == Plantable.PLANTABLE or harvest.value.plantable == Plantable.UNOBTAINABLE):
                 self.harvests[harvest.value.name] = 0
+
+        self.harvests = {
+            "moneybag": 10
+        }
 
     def get_farm_to_str_list(self) -> list[str]:
         res = []
@@ -274,6 +298,11 @@ class Farm:
                 self.harvests[square.name.lower()] = 0
             self.harvests[square.name.lower()] += 1
 
+        self.farm[index] = harvest
+
+        return True
+
+    def set_indext(self, index: int, harvest: Harvests) -> bool: # returns True if successful
         self.farm[index] = harvest
 
         return True

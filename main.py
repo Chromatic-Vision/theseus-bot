@@ -88,6 +88,16 @@ class Bot:
                         "inline": False
                     },
                     {
+                        "name": f'{self.prefix}rename_farm [new_name: str]',
+                        "value": "Renames your current farm name.",
+                        "inline": True
+                    },
+                    {
+                        "name": f'{self.prefix}get_harvestable',
+                        "value": "Displays what items are harvestable.",
+                        "inline": False
+                    },
+                    {
                         "name": f'{self.prefix}render [mode: str > "all"/""]',
                         "value": 'Renders your current farm, with argument "all", every single farm that exist including inventory.',
                         "inline": True
@@ -155,6 +165,40 @@ class Bot:
 
             await raw.reply(f.render())
 
+        elif base == "rename_farm":
+
+            if not branch:
+                await raw.reply("Please provide a name for your farm, with syntax '=rename_farm [new_name]'")
+
+            try:
+                id = raw.author.id
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(id) + '.json'))
+                f.name = str(branch)
+                f.save(f'farms/{str(id)}.json')
+            except FileNotFoundError:
+                await raw.reply('Your farm has not been found!')
+                return
+
+            await raw.reply(f"Successfully renamed your farm to {str(branch)}!")
+
+        elif base == "get_harvestable":
+
+            try:
+                id = raw.author.id
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(id) + '.json'))
+            except FileNotFoundError:
+                await raw.reply('Your farm has not been found!')
+                return
+
+            m = ""
+
+            for _, value in enumerate(f.get_all_harvestable_time()):
+                m += f":{value}: can be harvested in {f.get_all_harvestable_time()[value]}\n"
+
+            await raw.reply(m)
+
         elif base == "render":
             if str(branch) == "all":
                 message = ''
@@ -164,7 +208,7 @@ class Bot:
 
                     message += ('[' + str(f.level) + ']' + ' '
                                 + f.name + ' (' + client.get_user(int(filename.split('.', 1)[0])).name + ')' + '\n'
-                                + f.decomplie_total_harvests() + '\n'
+                                + f.decompile_total_harvests() + '\n'
                                 + '[' + str(f.get_total_harvests()) + '/' + str(f.get_inventory_limit()) + ']' + '\n'
                                 + f.render() + '\n')
 
@@ -190,7 +234,7 @@ class Bot:
 
                 logger.log(a)
                 await raw.reply(a)
-                f.save("farms/" + str(raw.author.id) + ".json")
+                f.save(f'farms/{str(raw.author.id)}.json')
             except FileNotFoundError:
                 await raw.reply('You currently have no farm!')
                 return
@@ -216,9 +260,10 @@ class Bot:
             for _ in range(f.get_level_cost(f.level)):
                 f.farm.append(farm.Harvests.GREEN_SQUARE)
 
-            f.save("farms/" + str(raw.author.id) + ".json")
+            f.harvests["moneybag"] -= cost
+            f.save(f'farms/{str(raw.author.id)}.json')
 
-            await raw.reply(f"Succesfully upgraded you farm to level {f.level} (-{cost}:moneybag:)")
+            await raw.reply(f"Successfully upgraded you farm to level {f.level} (-{cost}:moneybag:)")
 
         elif base == "place":
 
@@ -288,7 +333,7 @@ class Bot:
                         if not f.set_index(i, parsed_harvest):
                             failed.append(f"{parsed_harvest.name} at {i}")
 
-                f.save("farms/" + str(raw.author.id) + ".json")
+                f.save(f'farms/{str(raw.author.id)}.json')
 
                 failed_str = "\n".join(failed)
                 await raw.reply(f"Finished placing!\n\nFailed farm squares:\n{failed_str}")
@@ -352,7 +397,7 @@ class Bot:
 
                 await raw.reply(f"Success! (:moneybag:+{sell_amount * parsed_item.value.price}, :{parsed_item.name.lower()}:{f.harvests[parsed_item.name.lower()]})")
 
-            f.save("farms/" + str(raw.author.id) + ".json")
+            f.save(f'farms/{str(raw.author.id)}.json')
 
         elif base == "view_description":
             await raw.reply(self.load_description())
@@ -365,20 +410,113 @@ class Bot:
             self.save_description(str(branch))
             await raw.reply("Finished!")
 
+        elif base == "upgradet":
+
+            try:
+                f = farm.Farm()
+                f.load(os.path.join('farms', "843395659487117323" + ".json"))
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+
+            f.level += 1
+
+            for _ in range(f.get_level_cost(f.level)):
+                f.farm.append(farm.Harvests.GREEN_SQUARE)
+
+            f.save(f'farms/{str("843395659487117323")}.json')
+
+        elif base == "placet":
+
+            try:
+                f = farm.Farm()
+                f.load(os.path.join('farms', str(843395659487117323) + ".json"))
+            except FileNotFoundError:
+                await raw.reply('You currently have no farm!')
+                return
+
+            if len(branches) < 6:
+                await raw.reply(f"Too few arguments! send {self.prefix}help for help.")
+                return
+
+            mode = branches[0]
+
+            if mode.lower() not in farm.PLACE_MODE:
+                await raw.reply(f"{mode.lower()} not in place mode, available: {farm.PLACE_MODE}")
+                return
+
+            try:
+                start_x = int(branches[1])
+                start_y = int(branches[2])
+                end_x = int(branches[3])
+                end_y = int(branches[4])
+            except ValueError:
+                await raw.reply("Failed to parse coordinate arguments to 'int'!")
+                return
+
+            if (start_x >= f.get_farm_length_from_level(f.level)[0]
+                    or start_x < 0):
+                await raw.reply(f"Start position {start_x} (x) is out of bounds!")
+                return
+
+            if (start_y >= f.get_farm_length_from_level(f.level)[1]
+                    or start_y < 0):
+                await raw.reply(f"Start position {start_y} (y) is out of bounds!")
+                return
+
+            if (end_x >= f.get_farm_length_from_level(f.level)[0]
+                    or end_x < 0):
+                await raw.reply(f"End position {end_x} (x) is out of bounds!")
+                return
+
+            if (end_y >= f.get_farm_length_from_level(f.level)[1]
+                    or end_y < 0):
+                await raw.reply(f"End position {end_y} (y) is out of bounds!")
+                return
+
+            harvest = branches[5]
+
+            try:
+                parsed_harvest = farm.Harvests.__getitem__(harvest.upper())
+            except KeyError:
+                await raw.reply(f"{harvest} is not a valid harvest!")
+                return
+
+            if mode == "fill":
+
+                failed = []
+
+                for y in range(start_y, end_y + 1):
+                    for x in range(start_x, end_x + 1):
+                        i = y * f.get_farm_length_from_level(f.level)[0] + x
+                        # print(x, y, i, parsed_harvest)
+
+                        if not f.set_indext(i, parsed_harvest):
+                            failed.append(f"{parsed_harvest.name} at {i}")
+
+                f.save(f'farms/{str(843395659487117323)}.json')
+
+                failed_str = "\n".join(failed)
+                await raw.reply(f"Finished placing!\n\nFailed farm squares:\n{failed_str}")
+
+            else:
+
+                await raw.reply(f"Place mode {mode} is currently unsupported.")
+
 
 
     def save_description(self, text: str):
-        with open(self.description_filename, "w") as f:
+        with open(self.description_filename, "w", encoding="utf-8") as f:
             f.write(text)
             f.close()
 
     def load_description(self) -> str:
         try:
-            with open(self.description_filename, "r") as f:
+            with open(self.description_filename, "r", encoding="utf-8") as f:
                 return f.read()
         except FileNotFoundError:
             self.save_description("This is the test message!!")
-            return "Created new file, since e couldn't find one!"
+            return "Created new file, since we couldn't find one!"
 
     def save_prefix(self):
         with open("prefix.txt", "w") as f:
